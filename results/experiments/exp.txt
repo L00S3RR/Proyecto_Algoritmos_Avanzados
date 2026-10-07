@@ -1,0 +1,2 @@
+en esta carpeta se guardaran los resultados de la ejecucion del algoritmo
+

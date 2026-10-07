@@ -3,3 +3,5 @@
 !/requirements.txt
 !/results/
 !/results/**
+!/src/
+!/src/**
