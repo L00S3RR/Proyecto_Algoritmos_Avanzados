@@ -1,46 +1,48 @@
-"""Algoritmo exacto para bin packing 1D usando programación dinámica."""
+"""Branch and Bound para instancias pequenas de bin packing 1D."""
+from src.validation import normalize_instance
 
-def bin_packing_exacto(archivos: list, capacidad: int) -> list:
-    """Resuelve el bin packing 1D de forma exacta usando programación dinámica.
-    
-    Nota: Esta implementación es para instancias pequeñas.
-    
-    Args:
-        archivos: Lista de tamaños de archivos.
-        capacidad: Capacidad de cada disco.
-    
-    Returns:
-        Lista de discos, donde cada disco es una lista de archivos.
-    """
-    n = len(archivos)
-    if n == 0:
+MAX_ITEMS_EXACT = 28
+
+
+def bin_packing_exacto(archivos: list, capacidad: float, max_items: int = MAX_ITEMS_EXACT) -> list:
+    """Busca el minimo de discos. Es exacto, pero exponencial en el peor caso."""
+    items, cap = normalize_instance(archivos, capacidad)
+    if len(items) > max_items:
+        raise ValueError(f"Branch and Bound admite hasta {max_items} archivos; recibido: {len(items)}")
+    if not items:
         return []
-    
-    # Para instancias pequeñas, usar búsqueda exhaustiva
-    mejor_solucion = None
-    
-    def backtraking(idx, discos_actuales):
-        nonlocal mejor_solucion
-        if idx == n:
-            if mejor_solucion is None or len(discos_actuales) < len(mejor_solucion):
-                mejor_solucion = [d[:] for d in discos_actuales]
+    items.sort(key=lambda item: item[1], reverse=True)
+    # FFD da una cota superior inicial para podar la busqueda.
+    from src.algorithms.approximate import first_fit_decreasing
+    mejor = first_fit_decreasing([original for original, _ in items], capacidad)
+    mejor_cantidad = len(mejor)
+    discos, restantes = [], []
+
+    def buscar(indice):
+        nonlocal mejor, mejor_cantidad
+        if indice == len(items):
+            if len(discos) < mejor_cantidad:
+                mejor = [[valor for valor in disco] for disco in discos]
+                mejor_cantidad = len(discos)
             return
-        
-        # Podar si ya tenemos demasiados discos
-        if mejor_solucion is not None and len(discos_actuales) >= len(mejor_solucion):
+        if len(discos) >= mejor_cantidad:
             return
-        
-        # Probar colocar en disco existente
-        for disco in discos_actuales:
-            if sum(disco) + archivos[idx] <= capacidad:
-                disco.append(archivos[idx])
-                backtraking(idx + 1, discos_actuales)
-                disco.pop()
-        
-        # Probar crear nuevo disco
-        discos_actuales.append([archivos[idx]])
-        backtraking(idx + 1, discos_actuales)
-        discos_actuales.pop()
-    
-    backtraking(0, [])
-    return mejor_solucion
+        archivo, tamano = items[indice]
+        espacios_visitados = set()
+        for i, espacio in enumerate(restantes):
+            if espacio >= tamano and espacio not in espacios_visitados:
+                espacios_visitados.add(espacio)
+                discos[i].append(archivo)
+                restantes[i] -= tamano
+                buscar(indice + 1)
+                restantes[i] += tamano
+                discos[i].pop()
+        if len(discos) + 1 < mejor_cantidad:
+            discos.append([archivo])
+            restantes.append(cap - tamano)
+            buscar(indice + 1)
+            discos.pop()
+            restantes.pop()
+
+    buscar(0)
+    return mejor

@@ -1,95 +1,113 @@
-"""Prototipo mínimo ejecutable del proyecto de Bin Packing 1D.
-
-Permite definir una instancia, ejecutar algoritmos y producir una salida verificable.
-"""
-
+"""CLI comun para cargar/generar instancias y comparar alternativas."""
+import argparse
+import json
+from pathlib import Path
 import sys
-import os
 
-# Agregar el directorio src al path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from time import perf_counter
 
-from src.algorithms.approximate import first_fit_decreasing, best_fit_decreasing
-from src.algorithms.exact import bin_packing_exacto
+from src.algorithms.approximate import best_fit_decreasing, first_fit_decreasing
+from src.algorithms.exact import MAX_ITEMS_EXACT, bin_packing_exacto
 from src.generator import generar_instancia
+from src.validation import normalize_instance, validate_solution
 
-def main():
-    print("=" * 60)
-    print("PROTOTIPO: Bin Packing 1D - Asignación de archivos a discos")
-    print("=" * 60)
+ALGORITHMS = {
+    "ffd": first_fit_decreasing,
+    "bfd": best_fit_decreasing,
+    "exact": bin_packing_exacto,
+}
 
-    # 1. Definir o cargar una instancia
-    print("\n[1] Definiendo instancia de prueba...")
-    
-    # Opción A: Instancia manual (ejemplo conocido)
-    archivos_manual = [4, 3, 2.5, 2, 1.5, 1]
-    capacidad_manual = 5
-    
-    # Opción B: Instancia generada (reproducible)
-    archivos_generados = generar_instancia(10, 10, semilla=42)
-    capacidad_generada = 10
 
-    print(f"  Instancia manual: {archivos_manual} GB, Capacidad: {capacidad_manual} GB/disco")
-    print(f"  Instancia generada: {archivos_generados} (MB), Capacidad: {capacidad_generada} (MB)/disco")
-
-    # 2. Ejecutar algoritmo básico (First Fit Decreasing)
-    print("\n[2] Ejecutando algoritmo: First Fit Decreasing (FFD)...")
-    solucion_ffd = first_fit_decreasing(archivos_manual, capacidad_manual)
-
-    print("\n  Solución FFD:")
-    for i, disco in enumerate(solucion_ffd):
-        print(f"    Disco {i+1}: {disco} = {sum(disco)}/{capacidad_manual} GB")
-    print(f"  Total de discos: {len(solucion_ffd)}")
-
-    # 3. Ejecutar algoritmo exacto
-    print("\n[3] Ejecutando algoritmo exacto (búsqueda exhaustiva)...")
-    solucion_exacta = bin_packing_exacto(archivos_manual, capacidad_manual)
-
-    print("\n  Solución exacta:")
-    for i, disco in enumerate(solucion_exacta):
-        print(f"    Disco {i+1}: {disco} = {sum(disco)}/{capacidad_manual} GB")
-    print(f"  Total de discos: {len(solucion_exacta)}")
-
-    # 4. Ejecutar BFD
-    print("\n[4] Ejecutando algoritmo: Best Fit Decreasing (BFD)...")
-    solucion_bfd = best_fit_decreasing(archivos_manual, capacidad_manual)
-
-    print("\n  Solución BFD:")
-    for i, disco in enumerate(solucion_bfd):
-        print(f"    Disco {i+1}: {disco} = {sum(disco)}/{capacidad_manual} GB")
-    print(f"  Total de discos: {len(solucion_bfd)}")
-
-    # 5. Validación de la salida
-    print("\n[5] Validación de la salida...")
-    
-    valido = True
-    # Verificar que todos los archivos están asignados
-    archivos_asignados = []
-    for disco in solucion_ffd:
-        archivos_asignados.extend(disco)
-    
-    if sorted(archivos_asignados) != sorted(archivos_manual):
-        print("  [ERROR] No todos los archivos fueron asignados.")
-        valido = False
-    else:
-        print("  [OK] Todos los archivos asignados.")
-
-    # Verificar que ninguna capacidad excede el límite
-    for i, disco in enumerate(solucion_ffd):
-        if sum(disco) > capacidad_manual:
-            print(f"  [ERROR] Disco {i+1} excede capacidad.")
-            valido = False
+def leer_instancia(args):
+    if args.instance:
+        datos = json.loads(Path(args.instance).read_text(encoding="utf-8"))
+        if isinstance(datos, dict):
+            archivos, capacidad = datos.get("files"), datos.get("capacity")
+        elif isinstance(datos, list) and args.capacity is not None:
+            archivos, capacidad = datos, args.capacity
         else:
-            print(f"  [OK] Disco {i+1} dentro de capacidad.")
-
-    if valido:
-        print("\n  ¡PROTOTIPO EJECUTADO EXITOSAMENTE!")
+            raise ValueError("JSON esperado: {\"capacity\": C, \"files\": [...]}")
+    elif args.files is not None:
+        if args.capacity is None:
+            raise ValueError("--files requiere --capacity")
+        try:
+            archivos = [float(x.strip()) if "." in x else int(x.strip()) for x in args.files.split(",")]
+        except ValueError:
+            raise ValueError("--files debe contener numeros separados por comas") from None
+        capacidad = args.capacity
+    elif args.generate is not None:
+        if args.capacity is None:
+            raise ValueError("--generate requiere --capacity")
+        if not args.capacity.is_integer():
+            raise ValueError("La generacion requiere una capacidad entera")
+        archivos = generar_instancia(args.generate, int(args.capacity), args.seed)
+        capacidad = args.capacity
     else:
-        print("\n  ¡ERRORES EN LA EJECUCIÓN!")
+        archivos, capacidad = [4, 3, 2.5, 2, 1.5, 1], 5
+    normalize_instance(archivos, capacidad)
+    return archivos, capacidad
 
-    print("\n" + "=" * 60)
-    print("DEMOSTRACIÓN COMPLETADA")
-    print("=" * 60)
+
+def ejecutar(nombre, archivos, capacidad):
+    funcion = ALGORITHMS[nombre]
+    inicio = perf_counter()
+    discos = funcion(archivos, capacidad)
+    tiempo = perf_counter() - inicio
+    valido, mensaje = validate_solution(archivos, capacidad, discos)
+    if not valido:
+        raise RuntimeError(f"Salida invalida de {nombre}: {mensaje}")
+    usado = sum(sum(d) for d in discos)
+    total_capacidad = len(discos) * capacidad
+    desperdicio = total_capacidad - usado
+    utilizacion = 100 * usado / total_capacidad if total_capacidad else 100.0
+    return discos, tiempo, desperdicio, utilizacion
+
+
+def mostrar(nombre, resultado, capacidad):
+    discos, tiempo, desperdicio, utilizacion = resultado
+    print(f"\n{nombre.upper()} | discos: {len(discos)} | tiempo: {tiempo:.6f} s")
+    for i, disco in enumerate(discos, 1):
+        print(f"  Disco {i}: {disco} = {sum(disco)}/{capacidad}")
+    print(f"  Desperdicio total: {desperdicio}; utilizacion: {utilizacion:.2f}%")
+    print("  Validacion: OK")
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Bin Packing 1D: FFD, BFD y Branch and Bound")
+    entrada = parser.add_mutually_exclusive_group()
+    entrada.add_argument("--instance", help="JSON con capacity y files")
+    entrada.add_argument("--files", help="tamanos separados por coma, ej. 4,3,2.5,2")
+    entrada.add_argument("--generate", type=int, help="cantidad de archivos sinteticos")
+    parser.add_argument("--capacity", type=float, help="capacidad comun de cada disco")
+    parser.add_argument("--seed", type=int, default=42, help="semilla del generador (default: 42)")
+    parser.add_argument("--algorithm", choices=["ffd", "bfd", "exact", "compare"], default="compare")
+    parser.add_argument("--max-exact-items", type=int, default=MAX_ITEMS_EXACT)
+    args = parser.parse_args(argv)
+    try:
+        archivos, capacidad = leer_instancia(args)
+        print(f"Instancia: archivos={archivos}; capacidad={capacidad}")
+        seleccion = ["ffd", "bfd", "exact"] if args.algorithm == "compare" else [args.algorithm]
+        resultados = {}
+        for nombre in seleccion:
+            if nombre == "exact" and len(archivos) > args.max_exact_items:
+                print(f"\nEXACT: omitido; {len(archivos)} archivos supera el limite configurado ({args.max_exact_items}).")
+                continue
+            resultados[nombre] = ejecutar(nombre, archivos, capacidad)
+            mostrar(nombre, resultados[nombre], capacidad)
+        if "exact" in resultados:
+            optimo = len(resultados["exact"][0])
+            print(f"\nReferencia exacta: minimo comprobado = {optimo} discos")
+            for nombre in ("ffd", "bfd"):
+                if nombre in resultados:
+                    diferencia = len(resultados[nombre][0]) - optimo
+                    print(f"{nombre.upper()} frente al optimo: {diferencia:+d} discos")
+        return 0
+    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        parser.error(str(exc))
+
 
 if __name__ == "__main__":
     main()
