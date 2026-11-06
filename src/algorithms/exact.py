@@ -1,46 +1,45 @@
-"""Algoritmo exacto para bin packing 1D usando programación dinámica."""
+"""Búsqueda exacta con poda por incumbente y simetría."""
+from time import perf_counter
+from src.algorithms.approximate import first_fit_decreasing
+from src.validation import validar_entrada
 
-def bin_packing_exacto(archivos: list, capacidad: int) -> list:
-    """Resuelve el bin packing 1D de forma exacta usando programación dinámica.
-    
-    Nota: Esta implementación es para instancias pequeñas.
-    
-    Args:
-        archivos: Lista de tamaños de archivos.
-        capacidad: Capacidad de cada disco.
-    
-    Returns:
-        Lista de discos, donde cada disco es una lista de archivos.
-    """
-    n = len(archivos)
-    if n == 0:
-        return []
-    
-    # Para instancias pequeñas, usar búsqueda exhaustiva
-    mejor_solucion = None
-    
-    def backtraking(idx, discos_actuales):
-        nonlocal mejor_solucion
-        if idx == n:
-            if mejor_solucion is None or len(discos_actuales) < len(mejor_solucion):
-                mejor_solucion = [d[:] for d in discos_actuales]
+def bin_packing_exacto(archivos: list, capacidad: int, limite_segundos=None) -> list:
+    """Devuelve el óptimo o lanza TimeoutError si no logra certificarlo."""
+    validar_entrada(archivos, capacidad)
+    if limite_segundos is not None and limite_segundos <= 0:
+        raise ValueError('El límite debe ser positivo.')
+    orden = sorted(archivos, reverse=True)
+    mejor = first_fit_decreasing(orden, capacidad)
+    discos, cargas = [], []
+    inicio = perf_counter()
+    def buscar(idx):
+        nonlocal mejor
+        if limite_segundos is not None and perf_counter() - inicio >= limite_segundos:
+            raise TimeoutError('No se certificó el óptimo dentro del límite.')
+        if idx == len(orden):
+            if len(discos) < len(mejor):
+                mejor = [d[:] for d in discos]
             return
-        
-        # Podar si ya tenemos demasiados discos
-        if mejor_solucion is not None and len(discos_actuales) >= len(mejor_solucion):
+        if len(discos) >= len(mejor):
             return
-        
-        # Probar colocar en disco existente
-        for disco in discos_actuales:
-            if sum(disco) + archivos[idx] <= capacidad:
-                disco.append(archivos[idx])
-                backtraking(idx + 1, discos_actuales)
-                disco.pop()
-        
-        # Probar crear nuevo disco
-        discos_actuales.append([archivos[idx]])
-        backtraking(idx + 1, discos_actuales)
-        discos_actuales.pop()
-    
-    backtraking(0, [])
-    return mejor_solucion
+        archivo = orden[idx]
+        vistas = set()
+        for i in range(len(discos)):
+            if cargas[i] in vistas:
+                continue
+            vistas.add(cargas[i])
+            if cargas[i] + archivo <= capacidad:
+                anterior = cargas[i]
+                discos[i].append(archivo)
+                cargas[i] += archivo
+                buscar(idx + 1)
+                cargas[i] = anterior
+                discos[i].pop()
+        if len(discos) + 1 < len(mejor):
+            discos.append([archivo])
+            cargas.append(archivo)
+            buscar(idx + 1)
+            cargas.pop()
+            discos.pop()
+    buscar(0)
+    return mejor

@@ -1,0 +1,112 @@
+{
+  "entrada": {
+    "id": "contraejemplo",
+    "capacidad": 10,
+    "archivos": [
+      6,
+      5,
+      3,
+      2,
+      2,
+      2
+    ]
+  },
+  "metricas": [
+    {
+      "instancia": "contraejemplo",
+      "familia": "manual",
+      "semilla": "",
+      "n": 6,
+      "capacidad": 10,
+      "repeticion": 0,
+      "algoritmo": "FFD",
+      "estado": "ok",
+      "tiempo_ms": 0.0084,
+      "memoria_kib": 0.3984375,
+      "discos": 3,
+      "cota_inferior": 2,
+      "desperdicio": 10.0,
+      "utilizacion": 0.6666666666666666,
+      "brecha_opt_pct": 50.0,
+      "verificado": true
+    },
+    {
+      "instancia": "contraejemplo",
+      "familia": "manual",
+      "semilla": "",
+      "n": 6,
+      "capacidad": 10,
+      "repeticion": 0,
+      "algoritmo": "BFD",
+      "estado": "ok",
+      "tiempo_ms": 0.0057,
+      "memoria_kib": 0.453125,
+      "discos": 3,
+      "cota_inferior": 2,
+      "desperdicio": 10.0,
+      "utilizacion": 0.6666666666666666,
+      "brecha_opt_pct": 50.0,
+      "verificado": true
+    },
+    {
+      "instancia": "contraejemplo",
+      "familia": "manual",
+      "semilla": "",
+      "n": 6,
+      "capacidad": 10,
+      "repeticion": 0,
+      "algoritmo": "Exacto",
+      "estado": "ok",
+      "tiempo_ms": 0.0216,
+      "memoria_kib": 2.8671875,
+      "discos": 2,
+      "cota_inferior": 2,
+      "desperdicio": 0.0,
+      "utilizacion": 1.0,
+      "brecha_opt_pct": 0.0,
+      "verificado": true
+    }
+  ],
+  "soluciones": {
+    "FFD": [
+      [
+        6,
+        3
+      ],
+      [
+        5,
+        2,
+        2
+      ],
+      [
+        2
+      ]
+    ],
+    "BFD": [
+      [
+        6,
+        3
+      ],
+      [
+        5,
+        2,
+        2
+      ],
+      [
+        2
+      ]
+    ],
+    "Exacto": [
+      [
+        6,
+        2,
+        2
+      ],
+      [
+        5,
+        3,
+        2
+      ]
+    ]
+  }
+}

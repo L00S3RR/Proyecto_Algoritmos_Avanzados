@@ -1,24 +1,16 @@
-"""Generador de datos sintéticos para el problema de bin packing 1D."""
-
+"""Generación entera reproducible sin alterar random global."""
 import random
+from src.validation import validar_entrada
 
-def generar_instancia(n_archivos: int, capacidad: int, semilla: int = 42) -> list:
-    """Genera una instancia sintética de archivos con tamaños aleatorios.
-    
-    Args:
-        n_archivos: Número de archivos a generar.
-        capacidad: Capacidad máxima de cada disco (en MB).
-        semilla: Semilla para reproducibilidad.
-    
-    Returns:
-        Lista de tamaños de archivos (en MB).
-    """
-    random.seed(semilla)
-    # Generar tamaños entre 10% y 90% de la capacidad
-    return [random.randint(capacidad // 10, capacidad // 2) for _ in range(n_archivos)]
-
-if __name__ == "__main__":
-    instancia = generar_instancia(20, 10240, semilla=42)
-    print("Instancia generada:")
-    print(instancia)
-    print(f"Total: {sum(instancia)} MB")
+def generar_instancia(n_archivos: int, capacidad: int, semilla: int = 42, familia='uniforme') -> list:
+    validar_entrada([], capacidad)
+    if isinstance(n_archivos, bool) or not isinstance(n_archivos, int) or n_archivos < 0:
+        raise ValueError('n_archivos debe ser entero no negativo.')
+    if not isinstance(capacidad, int):
+        raise ValueError('La generación requiere capacidad entera.')
+    rangos = {'uniforme': (1, capacidad), 'pequenos': (1, max(1, capacidad // 4)),
+              'grandes': (capacidad // 2 + 1, capacidad)}
+    if familia not in rangos:
+        raise ValueError('Familia desconocida.')
+    rng = random.Random(semilla)
+    return [rng.randint(*rangos[familia]) for _ in range(n_archivos)]

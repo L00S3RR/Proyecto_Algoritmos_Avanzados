@@ -1,0 +1,24 @@
+{
+  "fecha_utc": "2026-11-06T17:25:03.595020+00:00",
+  "python": "3.12.8 (tags/v3.12.8:2dc476b, Dec  3 2024, 19:30:04) [MSC v.1942 64 bit (AMD64)]",
+  "plataforma": "Windows-11-10.0.26200-SP0",
+  "procesador": "AMD64 Family 25 Model 33 Stepping 2, AuthenticAMD",
+  "tamanos": [
+    8,
+    12,
+    16,
+    20,
+    100,
+    300,
+    1000
+  ],
+  "semillas": [
+    11,
+    42,
+    99
+  ],
+  "repeticiones": 3,
+  "exact_max": 20,
+  "timeout": 0.2,
+  "medicion": "Tiempo con perf_counter_ns; memoria pico Python con tracemalloc en corrida separada"
+}

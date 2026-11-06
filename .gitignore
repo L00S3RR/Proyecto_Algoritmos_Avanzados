@@ -1,7 +1,6 @@
-/*
-!/.gitignore
-!/requirements.txt
-!/results/
-!/results/**
-!/src/
-!/src/**
+.tools/
+.qa/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
