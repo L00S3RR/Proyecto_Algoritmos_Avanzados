@@ -37,7 +37,7 @@ El CLI acepta `--algorithm ffd|bfd|exact|compare`; `--max-exact-items` ajusta el
 | `src/generator.py` | Instancias enteras reproducibles con semilla. |
 | `src/experiments.py` | Barrido preliminar, repetición de tiempos, verificación y exportación CSV/SVG. |
 | `src/experiments_extended.py` | Barrido ampliado con tres distribuciones y registro del entorno. |
-| `tests/test_algorithms.py` | Doce pruebas unitarias/de integración con `unittest`; pytest puede descubrirlas. |
+| `tests/test_algorithms.py` | Trece pruebas unitarias/de integración con `unittest`; pytest puede descubrirlas. |
 | `data/instances/` | Instancias JSON pequeñas y adversas de demostración. |
 | `results/experiments/` | Resultados preliminares del Avance 7. |
 | `docs/` | Guía de avances e informe/bitácora del Avance 7. |

@@ -10,7 +10,7 @@ from src.algorithms.exact import bin_packing_exacto
 from src.generator import generar_instancia
 from src.main import main
 from src.validation import validate_solution
-from src.upload_to_ec2 import plan_files
+from src.upload_to_ec2 import plan_files, remote_free_bytes
 
 
 class TestBinPacking(unittest.TestCase):
@@ -67,6 +67,30 @@ class TestBinPacking(unittest.TestCase):
             self.assertEqual(len(bins), 2)
             self.assertEqual(sorted(path.name for disk in bins for path in disk), ["a.dat", "b.dat", "c.dat", "d.dat"])
             self.assertTrue(all(sum(path.stat().st_size for path in disk) <= 10 for disk in bins))
+
+    def test_espacio_remoto_exige_montaje(self):
+        class Stream:
+            def __init__(self, status, data=b""):
+                self.status, self.data, self.channel = status, data, self
+
+            def recv_exit_status(self):
+                return self.status
+
+            def read(self):
+                return self.data
+
+        class Client:
+            def __init__(self, mounted):
+                self.mounted = mounted
+
+            def exec_command(self, command, timeout):
+                if command.startswith("mountpoint"):
+                    return None, Stream(0 if self.mounted else 1), Stream(0)
+                return None, Stream(0, b"100 4096\n"), Stream(0)
+
+        self.assertEqual(remote_free_bytes(Client(True), "/disco1"), 409600)
+        with self.assertRaisesRegex(ValueError, "no es un disco montado"):
+            remote_free_bytes(Client(False), "/disco1")
 
     def test_generador_reproducible(self):
         self.assertEqual(generar_instancia(20, 100, 7), generar_instancia(20, 100, 7))

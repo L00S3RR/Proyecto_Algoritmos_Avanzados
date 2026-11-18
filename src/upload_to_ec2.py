@@ -4,6 +4,8 @@ import hashlib
 from collections import defaultdict, deque
 from pathlib import Path
 import posixpath
+import shlex
+import stat
 import sys
 from uuid import uuid4
 
@@ -66,6 +68,22 @@ def upload_verified(sftp, source, destination):
         raise
 
 
+def remote_free_bytes(client, directory):
+    """Consulta por SSH el espacio escribible en un punto de montaje Ubuntu."""
+    quoted = shlex.quote(directory)
+    _, stdout, stderr = client.exec_command(f"mountpoint -q -- {quoted}", timeout=15)
+    if stdout.channel.recv_exit_status() != 0:
+        raise ValueError(f"La carpeta no es un disco montado: {directory}")
+    _, stdout, stderr = client.exec_command(f"stat -f -c '%a %S' -- {quoted}", timeout=15)
+    if stdout.channel.recv_exit_status() != 0:
+        raise OSError(f"No se pudo consultar el espacio de {directory}: {stderr.read().decode(errors='replace')}")
+    try:
+        blocks, block_size = map(int, stdout.read().decode().split())
+    except ValueError:
+        raise OSError(f"Respuesta de espacio inválida para {directory}") from None
+    return blocks * block_size
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Asigna archivos locales y los sube a carpetas montadas en EC2")
     parser.add_argument("--source", type=Path, required=True, help="carpeta local de archivos (solo nivel superior)")
@@ -106,10 +124,9 @@ def main(argv=None):
             with client.open_sftp() as sftp:
                 for directory, files in zip(args.remote_dir, bins):
                     attrs = sftp.stat(directory)
-                    import stat
                     if not stat.S_ISDIR(attrs.st_mode):
                         raise ValueError(f"No es una carpeta remota: {directory}")
-                    free = sftp.statvfs(directory).f_bavail * sftp.statvfs(directory).f_frsize
+                    free = remote_free_bytes(client, directory)
                     needed = sum(p.stat().st_size for p in files)
                     if needed > free:
                         raise ValueError(f"Espacio insuficiente en {directory}: necesita {needed}, libre {free} bytes")
