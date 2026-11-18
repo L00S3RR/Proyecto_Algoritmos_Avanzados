@@ -1,5 +1,7 @@
 """Pruebas automatizadas (unittest; tambien compatibles con pytest)."""
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from contextlib import redirect_stdout
 from io import StringIO
 
@@ -8,6 +10,7 @@ from src.algorithms.exact import bin_packing_exacto
 from src.generator import generar_instancia
 from src.main import main
 from src.validation import validate_solution
+from src.upload_to_ec2 import plan_files
 
 
 class TestBinPacking(unittest.TestCase):
@@ -54,6 +57,16 @@ class TestBinPacking(unittest.TestCase):
             bin_packing_exacto([6, 6, 4, 4], 10, timeout_s=1e-15)
         with self.assertRaises(ValueError):
             bin_packing_exacto([1], 2, timeout_s=0)
+
+    def test_plan_transferencia_con_tamanos_repetidos(self):
+        with TemporaryDirectory() as folder:
+            source = Path(folder)
+            for name, size in (("a.dat", 6), ("b.dat", 6), ("c.dat", 4), ("d.dat", 4)):
+                (source / name).write_bytes(b"x" * size)
+            bins = plan_files(source, 10, "ffd")
+            self.assertEqual(len(bins), 2)
+            self.assertEqual(sorted(path.name for disk in bins for path in disk), ["a.dat", "b.dat", "c.dat", "d.dat"])
+            self.assertTrue(all(sum(path.stat().st_size for path in disk) <= 10 for disk in bins))
 
     def test_generador_reproducible(self):
         self.assertEqual(generar_instancia(20, 100, 7), generar_instancia(20, 100, 7))

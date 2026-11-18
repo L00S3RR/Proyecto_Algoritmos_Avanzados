@@ -36,6 +36,12 @@
 - Se agregó una prueba de timeout y de parámetro inválido. La suite ahora contiene 11 pruebas.
 - Sigue pendiente la validación física/AWS, que requiere acceso a infraestructura del equipo.
 
+## Preparación de transferencia a EC2 (18 de noviembre de 2026)
+
+- Se creó `src/upload_to_ec2.py` para asignar archivos locales por tamaño y transferirlos por SFTP a las carpetas montadas en EC2.
+- Se añadió un modo de planificación sin conexión, comprobación de espacio libre, rechazo de sobrescrituras y verificación SHA-256 tras la carga.
+- Se probó localmente la asignación con archivos de tamaños repetidos; la suite pasó con 12 pruebas. La transferencia real queda pendiente de ejecución desde la laptop con la IP y la clave privada del equipo.
+
 ## Evidencia ejecutada
 
 - `python -m unittest discover -s tests -v` — 10 pruebas aprobadas.
