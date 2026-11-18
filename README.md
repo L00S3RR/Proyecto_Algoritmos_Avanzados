@@ -20,18 +20,24 @@ Ejecutar desde la raíz del repositorio:
 
 ~~~powershell
 python -m src.main
+python -m src.main -a ffd
+python -m src.main -a bfd
+python -m src.main -i
+python -m src.cli
 python -m src.main --entrada examples/instancia.json --salida results/manual
 python -m src.main --n 100 --capacidad 100 --semilla 42 --familia uniforme --salida results/generada
 python -m src.main --experimentos --repeticiones 3 --exact-max 20 --timeout 0.2
 python -m pytest -q --junitxml=results/avance7/pruebas.xml
 ~~~
 
-También se admite python src/main.py. El modo sin parámetros ejecuta el ejemplo original y guarda results/avance7/ejecucion.json. El modo experimental guarda sus resultados en results/avance7 salvo que se use --salida. No ejecutar simultáneamente dos procesos sobre la misma carpeta de salida.
+También se admite python src/main.py o python -m src.cli para la interfaz interactiva. El modo sin parámetros ejecuta el ejemplo original con todos los algoritmos y guarda results/avance7/ejecucion.json. El parámetro `-a` o `--algoritmo` permite alternar entre `ffd`, `bfd`, `exacto` o `todos`. El modo experimental guarda sus resultados en results/avance7 salvo que se use --salida. No ejecutar simultáneamente dos procesos sobre la misma carpeta de salida.
 
 ## Parámetros
 
 | Parámetro | Descripción | Valor predeterminado |
 |---|---|---|
+| -a, --algoritmo | ffd, bfd, exacto o todos | todos |
+| -i, --interactivo | Inicia el menú interactivo en CLI | Desactivado |
 | --entrada | Ruta JSON de una instancia | Sin archivo |
 | --n | Cantidad de archivos generados | Demostración si no hay entrada |
 | --capacidad | Capacidad entera de la generación | 100 |

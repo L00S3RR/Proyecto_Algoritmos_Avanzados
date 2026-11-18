@@ -23,11 +23,17 @@ def cargar_instancia(ruta):
     validar_entrada(data['archivos'], data['capacidad'])
     return data
 
-def ejecutar_instancia(data, repeticion=0, exact_max=20, timeout=1.0):
+def ejecutar_instancia(data, repeticion=0, exact_max=20, timeout=1.0, algoritmos=None):
     archivos, capacidad = data['archivos'], data['capacidad']
     validar_entrada(archivos, capacidad)
     filas, soluciones = [], {}
-    for nombre, algoritmo in ALGORITMOS.items():
+    if algoritmos is not None:
+        seleccion = {a.upper() for a in algoritmos}
+        algs_a_ejecutar = {k: v for k, v in ALGORITMOS.items() if k.upper() in seleccion}
+    else:
+        algs_a_ejecutar = ALGORITMOS
+
+    for nombre, algoritmo in algs_a_ejecutar.items():
         fila = dict(instancia=data.get('id', 'manual'), familia=data.get('familia', 'manual'),
                     semilla=data.get('semilla', ''), n=len(archivos), capacidad=capacidad,
                     repeticion=repeticion, algoritmo=nombre, estado='ok', tiempo_ms=None,
