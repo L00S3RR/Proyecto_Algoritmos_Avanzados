@@ -49,6 +49,12 @@ class TestBinPacking(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "hasta 2 archivos"):
             bin_packing_exacto([1, 1, 1], 2, max_items=2)
 
+    def test_timeout_exacto(self):
+        with self.assertRaises(TimeoutError):
+            bin_packing_exacto([6, 6, 4, 4], 10, timeout_s=1e-15)
+        with self.assertRaises(ValueError):
+            bin_packing_exacto([1], 2, timeout_s=0)
+
     def test_generador_reproducible(self):
         self.assertEqual(generar_instancia(20, 100, 7), generar_instancia(20, 100, 7))
         self.assertTrue(all(1 <= x <= 50 for x in generar_instancia(20, 100, 7)))

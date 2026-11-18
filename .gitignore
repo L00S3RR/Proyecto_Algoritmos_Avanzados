@@ -19,3 +19,6 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+# Keep the Avance 7 report and log visible to Git.
+!/docs/AVANCE_7.md
+!/docs/BITACORA_AVANCE_7.md

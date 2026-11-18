@@ -1,12 +1,17 @@
 """Branch and Bound para instancias pequenas de bin packing 1D."""
 from src.validation import normalize_instance
+from time import perf_counter
+from typing import Optional
 
 MAX_ITEMS_EXACT = 28
 
 
-def bin_packing_exacto(archivos: list, capacidad: float, max_items: int = MAX_ITEMS_EXACT) -> list:
+def bin_packing_exacto(archivos: list, capacidad: float, max_items: int = MAX_ITEMS_EXACT, timeout_s: Optional[float] = None) -> list:
     """Busca el minimo de discos. Es exacto, pero exponencial en el peor caso."""
     items, cap = normalize_instance(archivos, capacidad)
+    if timeout_s is not None and timeout_s <= 0:
+        raise ValueError("El tiempo limite debe ser positivo")
+    deadline = perf_counter() + timeout_s if timeout_s is not None else None
     if len(items) > max_items:
         raise ValueError(f"Branch and Bound admite hasta {max_items} archivos; recibido: {len(items)}")
     if not items:
@@ -20,6 +25,8 @@ def bin_packing_exacto(archivos: list, capacidad: float, max_items: int = MAX_IT
 
     def buscar(indice):
         nonlocal mejor, mejor_cantidad
+        if deadline is not None and perf_counter() >= deadline:
+            raise TimeoutError(f"Branch and Bound excedio {timeout_s} segundos")
         if indice == len(items):
             if len(discos) < mejor_cantidad:
                 mejor = [[valor for valor in disco] for disco in discos]

@@ -51,10 +51,10 @@ def leer_instancia(args):
     return archivos, capacidad
 
 
-def ejecutar(nombre, archivos, capacidad):
+def ejecutar(nombre, archivos, capacidad, exact_timeout=None):
     funcion = ALGORITHMS[nombre]
     inicio = perf_counter()
-    discos = funcion(archivos, capacidad)
+    discos = funcion(archivos, capacidad, timeout_s=exact_timeout) if nombre == "exact" else funcion(archivos, capacidad)
     tiempo = perf_counter() - inicio
     valido, mensaje = validate_solution(archivos, capacidad, discos)
     if not valido:
@@ -85,9 +85,12 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=42, help="semilla del generador (default: 42)")
     parser.add_argument("--algorithm", choices=["ffd", "bfd", "exact", "compare"], default="compare")
     parser.add_argument("--max-exact-items", type=int, default=MAX_ITEMS_EXACT)
+    parser.add_argument("--exact-timeout", type=float, default=5.0, help="limite de segundos para el exacto (default: 5)")
     args = parser.parse_args(argv)
     try:
         archivos, capacidad = leer_instancia(args)
+        if args.exact_timeout <= 0:
+            raise ValueError("--exact-timeout debe ser positivo")
         print(f"Instancia: archivos={archivos}; capacidad={capacidad}")
         seleccion = ["ffd", "bfd", "exact"] if args.algorithm == "compare" else [args.algorithm]
         resultados = {}
@@ -95,7 +98,11 @@ def main(argv=None):
             if nombre == "exact" and len(archivos) > args.max_exact_items:
                 print(f"\nEXACT: omitido; {len(archivos)} archivos supera el limite configurado ({args.max_exact_items}).")
                 continue
-            resultados[nombre] = ejecutar(nombre, archivos, capacidad)
+            try:
+                resultados[nombre] = ejecutar(nombre, archivos, capacidad, args.exact_timeout)
+            except TimeoutError as exc:
+                print(f"\nEXACT: omitido; {exc}")
+                continue
             mostrar(nombre, resultados[nombre], capacidad)
         if "exact" in resultados:
             optimo = len(resultados["exact"][0])
