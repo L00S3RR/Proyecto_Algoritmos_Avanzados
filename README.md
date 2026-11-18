@@ -37,7 +37,7 @@ El CLI acepta `--algorithm ffd|bfd|exact|compare`; `--max-exact-items` ajusta el
 | `src/generator.py` | Instancias enteras reproducibles con semilla. |
 | `src/experiments.py` | Barrido preliminar, repetición de tiempos, verificación y exportación CSV/SVG. |
 | `src/experiments_extended.py` | Barrido ampliado con tres distribuciones y registro del entorno. |
-| `tests/test_algorithms.py` | Trece pruebas unitarias/de integración con `unittest`; pytest puede descubrirlas. |
+| `tests/test_algorithms.py` | Catorce pruebas unitarias/de integración con `unittest`; pytest puede descubrirlas. |
 | `data/instances/` | Instancias JSON pequeñas y adversas de demostración. |
 | `results/experiments/` | Resultados preliminares del Avance 7. |
 | `docs/` | Guía de avances e informe/bitácora del Avance 7. |
@@ -64,7 +64,7 @@ El experimento usa capacidad 100, `n = 6, 8, 10, 12, 14, 16`, semillas 42–44 y
 
 ## Transferir archivos reales desde Windows a EC2
 
-`src/upload_to_ec2.py` lee los archivos no vacíos del nivel superior de una carpeta local, calcula su distribución con FFD, BFD o Branch and Bound y los sube por SFTP a las carpetas montadas en EC2. Conserva la identidad de archivos con tamaños repetidos; comprueba espacio libre, evita sobrescrituras y verifica el SHA-256 de cada archivo transferido. La transferencia no empieza si faltan carpetas o espacio. Si falla a mitad, los archivos ya confirmados permanecen y los temporales de la transferencia fallida se eliminan.
+`src/upload_to_ec2.py` lee los archivos no vacíos del nivel superior de una carpeta local, calcula su distribución con FFD, BFD o Branch and Bound y los sube por SFTP a las carpetas montadas en EC2. Conserva la identidad de archivos con tamaños repetidos; comprueba espacio libre, evita sobrescrituras y verifica el SHA-256 de cada archivo transferido directamente en EC2. Muestra el progreso cada 50 MiB. La transferencia no empieza si faltan carpetas o espacio. Si falla a mitad, los archivos ya confirmados permanecen y el temporal de la transferencia fallida se elimina.
 
 En la laptop Windows, instala las dependencias con `python -m pip install -r requirements.txt`. Conéctate al menos una vez por SSH con tu clave para registrar y verificar la identidad del servidor en `known_hosts`. Prepara los archivos en una carpeta local, por ejemplo `C:\Users\HP\Documents\archivos_backup`. Usa rutas remotas absolutas a las carpetas montadas (no `~`). Para discos virtuales de 1 GiB, define una capacidad lógica menor que el espacio utilizable mostrado por `df -h`, por ejemplo 900 MiB.
 

@@ -10,7 +10,7 @@ from src.algorithms.exact import bin_packing_exacto
 from src.generator import generar_instancia
 from src.main import main
 from src.validation import validate_solution
-from src.upload_to_ec2 import plan_files, remote_free_bytes
+from src.upload_to_ec2 import plan_files, remote_free_bytes, remote_sha256
 
 
 class TestBinPacking(unittest.TestCase):
@@ -91,6 +91,28 @@ class TestBinPacking(unittest.TestCase):
         self.assertEqual(remote_free_bytes(Client(True), "/disco1"), 409600)
         with self.assertRaisesRegex(ValueError, "no es un disco montado"):
             remote_free_bytes(Client(False), "/disco1")
+
+    def test_hash_remoto_se_consulta_en_servidor(self):
+        class Stream:
+            channel = None
+
+            def __init__(self):
+                self.channel = self
+
+            def recv_exit_status(self):
+                return 0
+
+            def read(self):
+                return ("a" * 64 + "  /disco1/archivo.bin\n").encode()
+
+        class Client:
+            def exec_command(self, command, timeout):
+                self.command = command
+                return None, Stream(), Stream()
+
+        client = Client()
+        self.assertEqual(remote_sha256(client, "/disco1/archivo.bin"), "a" * 64)
+        self.assertIn("sha256sum", client.command)
 
     def test_generador_reproducible(self):
         self.assertEqual(generar_instancia(20, 100, 7), generar_instancia(20, 100, 7))

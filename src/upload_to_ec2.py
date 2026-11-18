@@ -43,9 +43,22 @@ def digest(stream):
         result.update(block)
 
 
-def upload_verified(sftp, source, destination):
+def remote_sha256(client, path):
+    """Calcula SHA-256 en el servidor sin descargar otra vez el archivo."""
+    _, stdout, stderr = client.exec_command(f"sha256sum -- {shlex.quote(path)}", timeout=15)
+    if stdout.channel.recv_exit_status() != 0:
+        raise OSError(f"No se pudo verificar {path}: {stderr.read().decode(errors='replace')}")
+    result = stdout.read().decode(errors="replace").split()
+    if not result or len(result[0]) != 64:
+        raise OSError(f"SHA-256 remoto inválido para {path}")
+    return result[0]
+
+
+def upload_verified(client, sftp, source, destination):
     temporary = destination + ".part-" + uuid4().hex
     local_hash = hashlib.sha256()
+    transferred = 0
+    next_report = 50 * MIB
     try:
         with source.open("rb") as local, sftp.open(temporary, "wb") as remote:
             while True:
@@ -54,13 +67,17 @@ def upload_verified(sftp, source, destination):
                     break
                 remote.write(block)
                 local_hash.update(block)
+                transferred += len(block)
+                if transferred >= next_report:
+                    print(f"  {source.name}: {transferred / MIB:.0f} MiB enviados", flush=True)
+                    next_report += 50 * MIB
         if sftp.stat(temporary).st_size != source.stat().st_size:
             raise IOError(f"Tamaño incorrecto tras transferir {source.name}")
-        with sftp.open(temporary, "rb") as remote:
-            if digest(remote) != local_hash.hexdigest():
-                raise IOError(f"SHA-256 incorrecto tras transferir {source.name}")
+        print(f"  {source.name}: verificando SHA-256 en EC2...", flush=True)
+        if remote_sha256(client, temporary) != local_hash.hexdigest():
+            raise IOError(f"SHA-256 incorrecto tras transferir {source.name}")
         sftp.rename(temporary, destination)
-    except Exception:
+    except BaseException:
         try:
             sftp.remove(temporary)
         except OSError:
@@ -141,7 +158,7 @@ def main(argv=None):
                 for directory, files in zip(args.remote_dir, bins):
                     for path in files:
                         target = posixpath.join(directory, path.name)
-                        upload_verified(sftp, path, target)
+                        upload_verified(client, sftp, path, target)
                         print(f"OK: {path.name} -> {target} (SHA-256 verificado)")
         finally:
             client.close()
